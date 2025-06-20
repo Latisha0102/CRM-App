@@ -44,8 +44,39 @@ app.post('/leads' , async(req, res) => {
 
 app.get('/leads' , async(req,res) =>{
     try{
-        const leads = await Lead.find()
-        res.status(200).json({data: leads})
+        
+
+        const { name,source ,status, salesAgent,tags } = req.query;
+       
+        const query={}
+
+        if(salesAgent){
+              const agent = await SalesAgent.findOne({ name: salesAgent });
+            if (agent) {
+                query.salesAgent = agent._id; 
+            } else {
+                return res.status(404).json({ error: 'Sales agent not found' });
+            }
+        }
+        if(status){
+            query.status = status
+        }
+        if(name){
+            query.name = name
+        }
+        if(source){
+            query.source = source
+        }
+     if(tags){
+        query.tags = { $in:tags.split(",")}
+     }
+
+        const searchedLeads = await Lead.find(query).populate("salesAgent")
+        res.json(searchedLeads)
+          if (Object.keys(query).length === 0) {
+            const allLeads = await Lead.find().populate("salesAgent");
+            return res.status(200).json({ data: allLeads });
+        }
     }catch(error){
         res.status(400).json({error:"Invalid input: 'status' must be one of ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Closed']."})
     }
